@@ -11,5 +11,6 @@ public interface OfficeService {
     OfficeResponse create(CreateOfficeRequest request);
     Page<OfficeResponse> findAll(Pageable page);
     OfficeResponse update(Long id, UpdateOfficeRequest request);
+    void delete(Long id);
 }
 

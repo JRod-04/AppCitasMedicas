@@ -11,4 +11,5 @@ public interface SpecialtyService {
     SpecialtyResponse create(CreateSpecialtyRequest request);
     Page<SpecialtyResponse> findAll(Pageable page);
     SpecialtyResponse findById(Long id);
+    void delete(Long id);
 }

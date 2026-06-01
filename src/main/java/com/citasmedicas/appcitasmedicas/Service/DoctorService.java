@@ -14,4 +14,5 @@ public interface DoctorService {
     List<DoctorResponse> findAll(Pageable page);
     List<DoctorResponse> findBySpecialty(Long specialtyId, Pageable pageable);
     DoctorResponse update(Long id, UpdateDoctorRequest request);
+    void delete(Long id);
 }

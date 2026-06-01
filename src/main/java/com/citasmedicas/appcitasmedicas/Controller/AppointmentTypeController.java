@@ -37,5 +37,11 @@ public class AppointmentTypeController {
         Page<AppointmentTypeResponse> result = service.findAll(PageRequest.of(page, size, Sort.by("id").ascending()));
         return ResponseEntity.ok(result);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }
 

@@ -1,6 +1,7 @@
 package com.citasmedicas.appcitasmedicas.Service.Impl;
 
 import com.citasmedicas.appcitasmedicas.Entity.AppointmentType;
+import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
 import com.citasmedicas.appcitasmedicas.Repository.AppointmentTypeRepository;
 import com.citasmedicas.appcitasmedicas.Service.AppointmentTypeService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentTypeRequest;
@@ -37,6 +38,14 @@ public class AppointmentTypeServiceImpl implements AppointmentTypeService {
     public Page<AppointmentTypeResponse> findAll(Pageable pageable) {
         return appointmentTypeRepository.findAll(pageable)
                 .map(appointmentTypeMapper::toResponse);
+    }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!appointmentTypeRepository.existsById(id)) {
+            throw new ResourceNotFoundException("AppointmentType not found with id: " + id);
+        }
+        appointmentTypeRepository.deleteById(id);
     }
 }
 

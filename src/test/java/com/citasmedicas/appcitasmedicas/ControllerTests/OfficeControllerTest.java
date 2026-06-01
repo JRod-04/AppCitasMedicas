@@ -2,6 +2,8 @@ package com.citasmedicas.appcitasmedicas.ControllerTests;
 
 import com.citasmedicas.appcitasmedicas.Controller.OfficeController;
 import com.citasmedicas.appcitasmedicas.Enums.OfficeStatus;
+import com.citasmedicas.appcitasmedicas.Exception.GlobalExceptionHandler;
+import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
 import com.citasmedicas.appcitasmedicas.Service.OfficeService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateOfficeRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdateOfficeRequest;
@@ -29,7 +31,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -63,6 +65,7 @@ class OfficeControllerTest {
 
         mockMvc = MockMvcBuilders
                 .standaloneSetup(officeController)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(converter)
                 .build();
 
@@ -124,5 +127,23 @@ class OfficeControllerTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
+    }
+    @Test
+    @DisplayName("delete - debe eliminar un consultorio")
+    void shouldDeleteOffice() throws Exception {
+        doNothing().when(officeService).delete(1L);
+
+        mockMvc.perform(delete("/api/offices/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("delete - debe retornar 404 cuando el consultorio no existe")
+    void shouldReturnNotFoundWhenDeletingNonExistentOffice() throws Exception {
+        doThrow(new ResourceNotFoundException("Office not found with id: 999"))
+                .when(officeService).delete(999L);
+
+        mockMvc.perform(delete("/api/offices/999"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -9,6 +9,7 @@ import com.citasmedicas.appcitasmedicas.Repository.DoctorRepository;
 import com.citasmedicas.appcitasmedicas.Repository.DoctorScheduleRepository;
 import com.citasmedicas.appcitasmedicas.Service.DoctorScheduleService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateDoctorScheduleRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateDoctorScheduleRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.DoctorScheduleResponse;
 import com.citasmedicas.appcitasmedicas.mapper.DoctorScheduleMapper;
 import lombok.RequiredArgsConstructor;
@@ -61,5 +62,37 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
         }
         return doctorScheduleRepository.findByDoctorId(doctorId, page)
                 .map(doctorScheduleMapper::toResponse);
+    }
+    @Override
+    @Transactional
+    public DoctorScheduleResponse update(Long id, UpdateDoctorScheduleRequest request) {
+        DoctorSchedule schedule = doctorScheduleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found with id: " + id));
+
+        if (request.dayOfWeek().isPresent()) {
+            schedule.setDayOfWeek(request.dayOfWeek().get());
+        }
+        if (request.startTime().isPresent()) {
+            schedule.setStartTime(request.startTime().get());
+        }
+        if (request.endTime().isPresent()) {
+            schedule.setEndTime(request.endTime().get());
+        }
+
+        // Validar que startTime sea antes que endTime
+        if (schedule.getStartTime().isAfter(schedule.getEndTime()) ||
+                schedule.getStartTime().equals(schedule.getEndTime())) {
+            throw new BusinessException("Start time must be before end time");
+        }
+
+        return doctorScheduleMapper.toResponse(doctorScheduleRepository.save(schedule));
+    }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!doctorScheduleRepository.existsById(id)) {
+            throw new ResourceNotFoundException("DoctorSchedule not found with id: " + id);
+        }
+        doctorScheduleRepository.deleteById(id);
     }
 }

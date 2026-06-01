@@ -94,4 +94,5 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
         return new PageImpl<>(pagedSlots, pageable, allSlots.size());
     }
+
 }

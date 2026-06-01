@@ -64,4 +64,13 @@ public class OfficeServiceImpl implements OfficeService {
 
         return officeMapper.toResponse(officeRepository.save(office));
     }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!officeRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Office not found with id: " + id);
+        }
+        officeRepository.deleteById(id);
+    }
 }

@@ -3,6 +3,7 @@ package com.citasmedicas.appcitasmedicas.Controller;
 
 import com.citasmedicas.appcitasmedicas.Service.DoctorScheduleService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateDoctorScheduleRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateDoctorScheduleRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.DoctorScheduleResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,5 +41,17 @@ public class DoctorScheduleController {
             @RequestParam(defaultValue = "10") int size) {
         var result = service.findByDoctor(doctorId, PageRequest.of(page, size, Sort.by("id").ascending()));
         return ResponseEntity.ok(result);
+    }
+    @PatchMapping("/schedules/{id}")
+    public ResponseEntity<DoctorScheduleResponse> updateSchedule(
+            @PathVariable Long doctorId,
+            @PathVariable Long id,
+            @RequestBody UpdateDoctorScheduleRequest request) {
+        return ResponseEntity.ok(service.update(id, request));
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

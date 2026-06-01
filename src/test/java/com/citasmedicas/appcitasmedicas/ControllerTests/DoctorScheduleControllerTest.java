@@ -1,6 +1,7 @@
 package com.citasmedicas.appcitasmedicas.ControllerTests;
 
 import com.citasmedicas.appcitasmedicas.Controller.DoctorScheduleController;
+import com.citasmedicas.appcitasmedicas.Exception.GlobalExceptionHandler;
 import com.citasmedicas.appcitasmedicas.Service.DoctorScheduleService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateDoctorScheduleRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.DoctorScheduleResponse;
@@ -27,9 +28,9 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,6 +61,7 @@ class DoctorScheduleControllerTest {
 
         mockMvc = MockMvcBuilders
                 .standaloneSetup(doctorScheduleController)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(converter)
                 .build();
 
@@ -108,5 +110,14 @@ class DoctorScheduleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("delete - debe eliminar un horario")
+    void shouldDeleteSchedule() throws Exception {
+        doNothing().when(doctorScheduleService).delete(1L);
+
+        mockMvc.perform(delete("/api/doctors/1/schedules/1"))
+                .andExpect(status().isNoContent());
     }
 }

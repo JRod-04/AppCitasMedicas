@@ -2,6 +2,8 @@ package com.citasmedicas.appcitasmedicas.ControllerTests;
 
 
 import com.citasmedicas.appcitasmedicas.Controller.SpecialtyController;
+import com.citasmedicas.appcitasmedicas.Exception.GlobalExceptionHandler;
+import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
 import com.citasmedicas.appcitasmedicas.Service.SpecialtyService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateSpecialtyRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.SpecialtyResponse;
@@ -23,9 +25,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +48,7 @@ class SpecialtyControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(specialtyController)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
         objectMapper = new ObjectMapper();
@@ -89,5 +91,24 @@ class SpecialtyControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("delete - debe eliminar una especialidad")
+    void shouldDeleteSpecialty() throws Exception {
+        doNothing().when(specialtyService).delete(1L);
+
+        mockMvc.perform(delete("/api/specialties/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("delete - debe retornar 404 cuando la especialidad no existe")
+    void shouldReturnNotFoundWhenDeletingNonExistentSpecialty() throws Exception {
+        doThrow(new ResourceNotFoundException("Specialty not found with id: 999"))
+                .when(specialtyService).delete(999L);
+
+        mockMvc.perform(delete("/api/specialties/999"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -13,4 +13,5 @@ public interface PatientService {
     PatientResponse findById(Long id);
     Page<PatientResponse> findAll(Pageable page);
     PatientResponse update(Long id, UpdatePatientRequest request);
+    void delete(Long id);
 }

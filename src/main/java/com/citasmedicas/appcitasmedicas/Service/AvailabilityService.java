@@ -10,5 +10,6 @@ import java.time.LocalDate;
 
 public interface AvailabilityService {
     Page<AvailabilitySlotResponse> getAvailableSlots(Long doctorId, LocalDate date, Long appointmentTypeId, Pageable page);
+
 }
 

@@ -290,4 +290,17 @@ class AppointmentRepositoryTest {
         assertThat(result.get(0)[0]).isEqualTo("Cardiología");
         assertThat(((Number) result.get(0)[1]).longValue()).isEqualTo(2L);
     }
+    @Test
+    @DisplayName("deleteById - elimina una cita por ID")
+    void shouldDeleteById() {
+        // Given
+        var start = LocalDateTime.now().plusDays(1);
+        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
+        var saved = appointmentRepository.save(appointment);
+
+        assertThat(appointmentRepository.existsById(saved.getId())).isTrue();
+
+        appointmentRepository.deleteById(saved.getId());
+        assertThat(appointmentRepository.existsById(saved.getId())).isFalse();
+    }
 }

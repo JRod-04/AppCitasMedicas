@@ -84,4 +84,10 @@ public class PatientServiceImpl implements PatientService {
         return patientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + id));
     }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Patient patient = getOrThrow(id);
+        patientRepository.delete(patient);
+    }
 }

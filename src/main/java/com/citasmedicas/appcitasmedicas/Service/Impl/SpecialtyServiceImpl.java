@@ -52,5 +52,13 @@ public class SpecialtyServiceImpl implements SpecialtyService {
         return specialtyMapper.toResponse(specialtyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Specialty not found with id: " + id)));
     }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!specialtyRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Specialty not found with id: " + id);
+        }
+        specialtyRepository.deleteById(id);
+    }
 }
 

@@ -71,4 +71,9 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> noShow(@PathVariable Long id) {
         return ResponseEntity.ok(service.markNoShow(id));
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }
