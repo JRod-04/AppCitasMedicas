@@ -1,4 +1,4 @@
-package com.citasmedicas.appcitasmedicas.Entity;
+package com.citasmedicas.appcitasmedicas.entity;
 
 import com.citasmedicas.appcitasmedicas.Enums.PatientStatus;
 import jakarta.persistence.*;
