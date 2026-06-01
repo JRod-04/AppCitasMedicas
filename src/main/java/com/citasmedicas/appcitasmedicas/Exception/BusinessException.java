@@ -1,7 +1,8 @@
 package com.citasmedicas.appcitasmedicas.Exception;
 
-public class BussisessException extends RuntimeException {
-  public BussisessException(String message) {
-    super(message);
-  }
+
+public class BusinessException extends RuntimeException {
+    public BusinessException(String message) {
+        super(message);
+    }
 }
