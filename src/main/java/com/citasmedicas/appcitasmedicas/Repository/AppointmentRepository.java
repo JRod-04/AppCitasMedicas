@@ -1,5 +1,5 @@
-package com.citasmedicas.appcitasmedicas.Repository;
 
+package com.citasmedicas.appcitasmedicas.Repository;
 
 import com.citasmedicas.appcitasmedicas.Entity.Appointment;
 import com.citasmedicas.appcitasmedicas.Enums.AppointmentStatus;
@@ -14,17 +14,15 @@ import java.util.List;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
-    // Query methods derivados
     List<Appointment> findByPatientIdAndStatus(Long patientId, AppointmentStatus status);
     List<Appointment> findByStartAtBetween(LocalDateTime from, LocalDateTime to);
     List<Appointment> findByDoctorId(Long doctorId);
     List<Appointment> findByPatientId(Long patientId);
 
-    // Validar traslape para un doctor
     @Query("""
         SELECT COUNT(a) > 0 FROM Appointment a
         WHERE a.doctor.id = :doctorId
-          AND a.status NOT IN ('CANCELLED')
+          AND a.status <> :cancelled
           AND a.startAt < :endAt
           AND a.endAt > :startAt
           AND (:excludeId IS NULL OR a.id <> :excludeId)
@@ -33,14 +31,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("doctorId") Long doctorId,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
-            @Param("excludeId") Long excludeId
+            @Param("excludeId") Long excludeId,
+            @Param("cancelled") AppointmentStatus cancelled
     );
 
-    // Validar traslape para un consultorio
     @Query("""
         SELECT COUNT(a) > 0 FROM Appointment a
         WHERE a.office.id = :officeId
-          AND a.status NOT IN ('CANCELLED')
+          AND a.status <> :cancelled
           AND a.startAt < :endAt
           AND a.endAt > :startAt
           AND (:excludeId IS NULL OR a.id <> :excludeId)
@@ -49,14 +47,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("officeId") Long officeId,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
-            @Param("excludeId") Long excludeId
+            @Param("excludeId") Long excludeId,
+            @Param("cancelled") AppointmentStatus cancelled
     );
 
-    // Validar traslape para un paciente
     @Query("""
         SELECT COUNT(a) > 0 FROM Appointment a
         WHERE a.patient.id = :patientId
-          AND a.status NOT IN ('CANCELLED')
+          AND a.status <> :cancelled
           AND a.startAt < :endAt
           AND a.endAt > :startAt
           AND (:excludeId IS NULL OR a.id <> :excludeId)
@@ -65,14 +63,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("patientId") Long patientId,
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt,
-            @Param("excludeId") Long excludeId
+            @Param("excludeId") Long excludeId,
+            @Param("cancelled") AppointmentStatus cancelled
     );
 
-    // Citas activas de un doctor en un rango temporal
     @Query("""
         SELECT a FROM Appointment a
         WHERE a.doctor.id = :doctorId
-          AND a.status NOT IN ('CANCELLED')
+          AND a.status <> :cancelled
           AND a.startAt >= :from
           AND a.startAt < :to
         ORDER BY a.startAt
@@ -80,29 +78,29 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findActiveDoctorAppointmentsInRange(
             @Param("doctorId") Long doctorId,
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("to") LocalDateTime to,
+            @Param("cancelled") AppointmentStatus cancelled
     );
 
-    // Ocupación de consultorios por rango de fechas
     @Query("""
         SELECT a.office.id, a.office.name, COUNT(a)
         FROM Appointment a
-        WHERE a.status NOT IN ('CANCELLED')
+        WHERE a.status <> :cancelled
           AND a.startAt >= :from
           AND a.startAt < :to
         GROUP BY a.office.id, a.office.name
     """)
     List<Object[]> findOfficeOccupancy(
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("to") LocalDateTime to,
+            @Param("cancelled") AppointmentStatus cancelled
     );
 
-    // Productividad de doctores (citas completadas)
     @Query("""
         SELECT a.doctor.id, a.doctor.firstName, a.doctor.lastName,
                a.doctor.specialty.name, COUNT(a)
         FROM Appointment a
-        WHERE a.status = 'COMPLETED'
+        WHERE a.status = :completed
           AND a.startAt >= :from
           AND a.startAt < :to
         GROUP BY a.doctor.id, a.doctor.firstName, a.doctor.lastName, a.doctor.specialty.name
@@ -110,15 +108,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     """)
     List<Object[]> findDoctorProductivity(
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("to") LocalDateTime to,
+            @Param("completed") AppointmentStatus completed
     );
 
-    // Pacientes con más NO_SHOW
     @Query("""
         SELECT a.patient.id, a.patient.firstName, a.patient.lastName,
                a.patient.documentNumber, COUNT(a)
         FROM Appointment a
-        WHERE a.status = 'NO_SHOW'
+        WHERE a.status = :noShow
           AND a.startAt >= :from
           AND a.startAt < :to
         GROUP BY a.patient.id, a.patient.firstName, a.patient.lastName, a.patient.documentNumber
@@ -126,23 +124,22 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     """)
     List<Object[]> findNoShowPatients(
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("to") LocalDateTime to,
+            @Param("noShow") AppointmentStatus noShow
     );
 
-    // Contar NO_SHOW por especialidad
     @Query("""
         SELECT a.doctor.specialty.name, COUNT(a)
         FROM Appointment a
-        WHERE a.status IN ('CANCELLED', 'NO_SHOW')
+        WHERE a.status IN (:cancelled, :noShow)
           AND a.startAt >= :from
           AND a.startAt < :to
         GROUP BY a.doctor.specialty.name
     """)
     List<Object[]> countCancelledAndNoShowBySpecialty(
             @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("to") LocalDateTime to,
+            @Param("cancelled") AppointmentStatus cancelled,
+            @Param("noShow") AppointmentStatus noShow
     );
-
-    void deleteAll();
 }
-
