@@ -1,6 +1,6 @@
 package com.citasmedicas.appcitasmedicas.RepositoryTest;
 
-import com.citasmedicas.appcitasmedicas.entity.AppointmentType;
+import com.citasmedicas.appcitasmedicas.Entity.AppointmentType;
 import com.citasmedicas.appcitasmedicas.Repository.AppointmentTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

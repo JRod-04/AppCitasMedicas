@@ -1,7 +1,7 @@
 
 package com.citasmedicas.appcitasmedicas.Repository;
 
-import com.citasmedicas.appcitasmedicas.entity.Appointment;
+import com.citasmedicas.appcitasmedicas.Entity.Appointment;
 import com.citasmedicas.appcitasmedicas.Enums.AppointmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

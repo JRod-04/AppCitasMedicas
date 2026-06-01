@@ -2,7 +2,7 @@ package com.citasmedicas.appcitasmedicas.RepositoryTest;
 
 
 import com.citasmedicas.appcitasmedicas.Repository.OfficeRepository;
-import com.citasmedicas.appcitasmedicas.entity.Office;
+import com.citasmedicas.appcitasmedicas.Entity.Office;
 import com.citasmedicas.appcitasmedicas.Enums.OfficeStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

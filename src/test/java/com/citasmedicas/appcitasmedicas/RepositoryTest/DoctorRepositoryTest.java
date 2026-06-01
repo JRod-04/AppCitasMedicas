@@ -3,8 +3,8 @@ package com.citasmedicas.appcitasmedicas.RepositoryTest;
 
 import com.citasmedicas.appcitasmedicas.Repository.DoctorRepository;
 import com.citasmedicas.appcitasmedicas.Repository.SpecialtyRepository;
-import com.citasmedicas.appcitasmedicas.entity.Doctor;
-import com.citasmedicas.appcitasmedicas.entity.Specialty;
+import com.citasmedicas.appcitasmedicas.Entity.Doctor;
+import com.citasmedicas.appcitasmedicas.Entity.Specialty;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

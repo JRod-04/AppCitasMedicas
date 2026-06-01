@@ -1,7 +1,7 @@
 
 package com.citasmedicas.appcitasmedicas.RepositoryTest;
 
-import com.citasmedicas.appcitasmedicas.entity.*;
+import com.citasmedicas.appcitasmedicas.Entity.*;
 import com.citasmedicas.appcitasmedicas.Enums.AppointmentStatus;
 import com.citasmedicas.appcitasmedicas.Enums.OfficeStatus;
 import com.citasmedicas.appcitasmedicas.Enums.PatientStatus;

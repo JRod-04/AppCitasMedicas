@@ -1,6 +1,6 @@
 package com.citasmedicas.appcitasmedicas.Repository;
 
-import com.citasmedicas.appcitasmedicas.entity.Specialty;
+import com.citasmedicas.appcitasmedicas.Entity.Specialty;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

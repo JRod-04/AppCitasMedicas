@@ -1,4 +1,4 @@
-package com.citasmedicas.appcitasmedicas.entity;
+package com.citasmedicas.appcitasmedicas.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,7 +33,7 @@ public class Doctor {
     private Specialty specialty;
 
     @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)
-    private List<DoctorSchedule> schedules;
+    private List<com.citasmedicas.appcitasmedicas.Entity.DoctorSchedule> schedules;
 
     @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)
     private List<Appointment> appointments;

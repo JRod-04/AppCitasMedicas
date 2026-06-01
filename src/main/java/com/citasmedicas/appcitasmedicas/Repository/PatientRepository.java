@@ -1,6 +1,6 @@
 package com.citasmedicas.appcitasmedicas.Repository;
 
-import com.citasmedicas.appcitasmedicas.entity.Patient;
+import com.citasmedicas.appcitasmedicas.Entity.Patient;
 import com.citasmedicas.appcitasmedicas.Enums.PatientStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

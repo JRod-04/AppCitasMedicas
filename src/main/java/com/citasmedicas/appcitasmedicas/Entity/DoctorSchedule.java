@@ -1,4 +1,4 @@
-package com.citasmedicas.appcitasmedicas.entity;
+package com.citasmedicas.appcitasmedicas.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;

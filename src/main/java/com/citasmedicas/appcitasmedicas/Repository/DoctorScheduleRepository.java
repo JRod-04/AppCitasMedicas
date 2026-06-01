@@ -1,6 +1,6 @@
 package com.citasmedicas.appcitasmedicas.Repository;
 
-import com.citasmedicas.appcitasmedicas.entity.DoctorSchedule;
+import com.citasmedicas.appcitasmedicas.Entity.DoctorSchedule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
