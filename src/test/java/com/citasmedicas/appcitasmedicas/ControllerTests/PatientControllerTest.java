@@ -1,6 +1,8 @@
 package com.citasmedicas.appcitasmedicas.ControllerTests;
 
 import com.citasmedicas.appcitasmedicas.Controller.PatientController;
+import com.citasmedicas.appcitasmedicas.Exception.GlobalExceptionHandler;
+import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
 import com.citasmedicas.appcitasmedicas.Service.PatientService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreatePatientRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdatePatientRequest;
@@ -29,7 +31,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -63,6 +65,7 @@ class PatientControllerTest {
 
         mockMvc = MockMvcBuilders
                 .standaloneSetup(patientController)
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(converter)
                 .build();
 
@@ -138,5 +141,24 @@ class PatientControllerTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
+    }
+
+    @Test
+    @DisplayName("delete - debe eliminar un paciente")
+    void shouldDeletePatient() throws Exception {
+        doNothing().when(patientService).delete(1L);
+
+        mockMvc.perform(delete("/api/patients/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("delete - debe retornar 404 cuando el paciente no existe")
+    void shouldReturnNotFoundWhenDeletingNonExistentPatient() throws Exception {
+        doThrow(new ResourceNotFoundException("Patient not found with id: 999"))
+                .when(patientService).delete(999L);
+
+        mockMvc.perform(delete("/api/patients/999"))
+                .andExpect(status().isNotFound());
     }
 }

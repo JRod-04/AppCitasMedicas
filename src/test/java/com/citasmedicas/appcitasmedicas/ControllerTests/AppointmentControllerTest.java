@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -189,5 +190,14 @@ class AppointmentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("NO_SHOW"));
     }
+    @Test
+    @DisplayName("delete - debe eliminar una cita")
+    void shouldDeleteAppointment() throws Exception {
+        // Given
+        doNothing().when(appointmentService).delete(1L);
 
+        // When & Then
+        mockMvc.perform(delete("/api/appointments/1"))
+                .andExpect(status().isNoContent());
+    }
 }

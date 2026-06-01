@@ -9,5 +9,6 @@ import org.springframework.data.domain.Pageable;
 public interface AppointmentTypeService {
     AppointmentTypeResponse create(CreateAppointmentTypeRequest request);
     Page<AppointmentTypeResponse> findAll(Pageable page);
+    void delete(Long id);
 }
 

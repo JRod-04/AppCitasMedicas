@@ -15,4 +15,5 @@ public interface AppointmentService {
     AppointmentResponse cancel(Long id, CancelAppointmentRequest request);
     AppointmentResponse complete(Long id, String observations);
     AppointmentResponse markNoShow(Long id);
+    void delete(Long id);
 }

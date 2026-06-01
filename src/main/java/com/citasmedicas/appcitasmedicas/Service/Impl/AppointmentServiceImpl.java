@@ -285,4 +285,10 @@ public class AppointmentServiceImpl implements AppointmentService {
                         new ResourceNotFoundException(
                                 "Appointment not found with id: " + id));
     }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Appointment appointment = getOrThrow(id);
+        appointmentRepository.delete(appointment);
+    }
 }

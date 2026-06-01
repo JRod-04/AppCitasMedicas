@@ -99,4 +99,10 @@ public class DoctorServiceImpl implements DoctorService {
         return doctorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + id));
     }
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Doctor doctor = getOrThrow(id);
+        doctorRepository.delete(doctor);
+    }
 }

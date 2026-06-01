@@ -2,6 +2,7 @@ package com.citasmedicas.appcitasmedicas.ControllerTests;
 
 
 import com.citasmedicas.appcitasmedicas.Controller.AppointmentTypeController;
+import com.citasmedicas.appcitasmedicas.Exception.GlobalExceptionHandler;
 import com.citasmedicas.appcitasmedicas.Service.AppointmentTypeService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentTypeRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
@@ -24,9 +25,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,8 +48,9 @@ class AppointmentTypeControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(appointmentTypeController).
-                build();
+                .standaloneSetup(appointmentTypeController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
 
         objectMapper = new ObjectMapper();
 
@@ -91,5 +93,14 @@ class AppointmentTypeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("delete - debe eliminar un tipo de cita")
+    void shouldDeleteAppointmentType() throws Exception {
+        doNothing().when(appointmentTypeService).delete(1L);
+
+        mockMvc.perform(delete("/api/appointment-types/1"))
+                .andExpect(status().isNoContent());
     }
 }

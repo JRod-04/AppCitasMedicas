@@ -44,4 +44,10 @@ public class OfficeController {
                                                  @Valid @RequestBody UpdateOfficeRequest req) {
         return ResponseEntity.ok(service.update(id, req));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }
