@@ -1,7 +1,7 @@
 package com.citasmedicas.appcitasmedicas.mapper;
 
-import com.universidad.consultorio.dto.Response.AppointmentResponse;
 import com.citasmedicas.appcitasmedicas.Entity.Appointment;
+import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
 import org.springframework.stereotype.Component;
 
 @Component

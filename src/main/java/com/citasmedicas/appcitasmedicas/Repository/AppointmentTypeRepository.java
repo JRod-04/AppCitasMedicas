@@ -1,4 +1,9 @@
 package com.citasmedicas.appcitasmedicas.Repository;
 
-public interface AppointmentTypeRepository {
+import com.citasmedicas.appcitasmedicas.Entity.AppointmentType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface AppointmentTypeRepository extends JpaRepository<AppointmentType, Long> {
 }
