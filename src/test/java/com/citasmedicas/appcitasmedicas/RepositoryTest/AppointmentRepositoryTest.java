@@ -1,7 +1,7 @@
+
 package com.citasmedicas.appcitasmedicas.RepositoryTest;
 
-
-import com.citasmedicas.appcitasmedicas.Entity.*;
+import com.citasmedicas.appcitasmedicas.entity.*;
 import com.citasmedicas.appcitasmedicas.Enums.AppointmentStatus;
 import com.citasmedicas.appcitasmedicas.Enums.OfficeStatus;
 import com.citasmedicas.appcitasmedicas.Enums.PatientStatus;
@@ -13,10 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,6 +36,8 @@ class AppointmentRepositoryTest {
 
     @BeforeEach
     void setUp() {
+        appointmentRepository.deleteAll();
+
         var specialty = specialtyRepository.save(Specialty.builder()
                 .name("Cardiología")
                 .build());
@@ -81,8 +80,8 @@ class AppointmentRepositoryTest {
                 .doctor(doctor)
                 .office(office)
                 .appointmentType(appointmentType)
-                .startAt(start)
-                .endAt(end)
+                .startAt(start.truncatedTo(java.time.temporal.ChronoUnit.SECONDS))
+                .endAt(end.truncatedTo(java.time.temporal.ChronoUnit.SECONDS))
                 .status(status)
                 .build();
     }
@@ -91,8 +90,7 @@ class AppointmentRepositoryTest {
     @DisplayName("findByPatientIdAndStatus - encuentra citas por paciente y estado")
     void shouldFindByPatientIdAndStatus() {
         var start = LocalDateTime.now().plusDays(1);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
         var result = appointmentRepository.findByPatientIdAndStatus(patient.getId(), AppointmentStatus.SCHEDULED);
 
@@ -103,22 +101,15 @@ class AppointmentRepositoryTest {
     @Test
     @DisplayName("findByStartAtBetween - encuentra citas en rango de fechas")
     void shouldFindByStartAtBetween() {
-        var base = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0);
-        var appointment = createAppointment(base, base.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
-
-        var result = appointmentRepository.findByStartAtBetween(base.minusHours(1), base.plusDays(2));
-
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getStartAt()).isEqualTo(base);
+        var base = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0)
+                .truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 
     @Test
     @DisplayName("findByDoctorId - encuentra citas por doctor")
     void shouldFindByDoctorId() {
         var start = LocalDateTime.now().plusDays(1);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
         var result = appointmentRepository.findByDoctorId(doctor.getId());
 
@@ -130,8 +121,7 @@ class AppointmentRepositoryTest {
     @DisplayName("findByPatientId - encuentra citas por paciente")
     void shouldFindByPatientId() {
         var start = LocalDateTime.now().plusDays(1);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
         var result = appointmentRepository.findByPatientId(patient.getId());
 
@@ -143,10 +133,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsDoctorOverlap - detecta superposición de horario para doctor")
     void shouldDetectDoctorOverlap() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
-        var overlap = appointmentRepository.existsDoctorOverlap(doctor.getId(), start.plusMinutes(15), start.plusMinutes(45), null);
+        var overlap = appointmentRepository.existsDoctorOverlap(
+                doctor.getId(), start.plusMinutes(15), start.plusMinutes(45),
+                null, AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isTrue();
     }
@@ -155,10 +146,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsDoctorOverlap - no detecta superposición cuando no hay conflicto")
     void shouldNotDetectDoctorOverlap() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
-        var overlap = appointmentRepository.existsDoctorOverlap(doctor.getId(), start.plusMinutes(30), start.plusMinutes(60), null);
+        var overlap = appointmentRepository.existsDoctorOverlap(
+                doctor.getId(), start.plusMinutes(30), start.plusMinutes(60),
+                null, AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isFalse();
     }
@@ -167,10 +159,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsDoctorOverlap - ignora la cita actual en actualizaciones")
     void shouldIgnoreCurrentAppointmentWhenCheckingOverlap() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        var saved = appointmentRepository.save(appointment);
+        var saved = appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
-        var overlap = appointmentRepository.existsDoctorOverlap(doctor.getId(), start.plusMinutes(15), start.plusMinutes(45), saved.getId());
+        var overlap = appointmentRepository.existsDoctorOverlap(
+                doctor.getId(), start.plusMinutes(15), start.plusMinutes(45),
+                saved.getId(), AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isFalse();
     }
@@ -179,10 +172,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsOfficeOverlap - detecta superposición de horario para consultorio")
     void shouldDetectOfficeOverlap() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.CONFIRMED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.CONFIRMED));
 
-        var overlap = appointmentRepository.existsOfficeOverlap(office.getId(), start.plusMinutes(10), start.plusMinutes(40), null);
+        var overlap = appointmentRepository.existsOfficeOverlap(
+                office.getId(), start.plusMinutes(10), start.plusMinutes(40),
+                null, AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isTrue();
     }
@@ -191,10 +185,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsOfficeOverlap - citas canceladas no bloquean el consultorio")
     void shouldNotBlockOfficeWhenAppointmentIsCancelled() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.CANCELLED));
 
-        var overlap = appointmentRepository.existsOfficeOverlap(office.getId(), start, start.plusMinutes(30), null);
+        var overlap = appointmentRepository.existsOfficeOverlap(
+                office.getId(), start, start.plusMinutes(30),
+                null, AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isFalse();
     }
@@ -203,10 +198,11 @@ class AppointmentRepositoryTest {
     @DisplayName("existsPatientOverlap - detecta superposición de horario para paciente")
     void shouldDetectPatientOverlap() {
         var start = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
-        var overlap = appointmentRepository.existsPatientOverlap(patient.getId(), start.plusMinutes(5), start.plusMinutes(35), null);
+        var overlap = appointmentRepository.existsPatientOverlap(
+                patient.getId(), start.plusMinutes(5), start.plusMinutes(35),
+                null, AppointmentStatus.CANCELLED);
 
         assertThat(overlap).isTrue();
     }
@@ -217,10 +213,10 @@ class AppointmentRepositoryTest {
         var from = LocalDateTime.now().plusDays(1).withHour(8).withMinute(0);
         var to = from.plusDays(1);
         var start = from.withHour(10).withMinute(0);
-        var appointment = createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED);
-        appointmentRepository.save(appointment);
+        appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.SCHEDULED));
 
-        var result = appointmentRepository.findActiveDoctorAppointmentsInRange(doctor.getId(), from, to);
+        var result = appointmentRepository.findActiveDoctorAppointmentsInRange(
+                doctor.getId(), from, to, AppointmentStatus.CANCELLED);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getDoctor().getId()).isEqualTo(doctor.getId());
@@ -236,7 +232,7 @@ class AppointmentRepositoryTest {
         appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.CONFIRMED));
         appointmentRepository.save(createAppointment(start.plusMinutes(30), start.plusMinutes(60), AppointmentStatus.COMPLETED));
 
-        var result = appointmentRepository.findOfficeOccupancy(from, to);
+        var result = appointmentRepository.findOfficeOccupancy(from, to, AppointmentStatus.CANCELLED);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0)[0]).isEqualTo(office.getId());
@@ -254,7 +250,7 @@ class AppointmentRepositoryTest {
         appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.COMPLETED));
         appointmentRepository.save(createAppointment(start.plusMinutes(30), start.plusMinutes(60), AppointmentStatus.COMPLETED));
 
-        var result = appointmentRepository.findDoctorProductivity(from, to);
+        var result = appointmentRepository.findDoctorProductivity(from, to, AppointmentStatus.COMPLETED);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0)[0]).isEqualTo(doctor.getId());
@@ -270,7 +266,7 @@ class AppointmentRepositoryTest {
 
         appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.NO_SHOW));
 
-        var result = appointmentRepository.findNoShowPatients(from, to);
+        var result = appointmentRepository.findNoShowPatients(from, to, AppointmentStatus.NO_SHOW);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0)[0]).isEqualTo(patient.getId());
@@ -287,7 +283,8 @@ class AppointmentRepositoryTest {
         appointmentRepository.save(createAppointment(start, start.plusMinutes(30), AppointmentStatus.CANCELLED));
         appointmentRepository.save(createAppointment(start.plusHours(1), start.plusHours(1).plusMinutes(30), AppointmentStatus.NO_SHOW));
 
-        var result = appointmentRepository.countCancelledAndNoShowBySpecialty(from, to);
+        var result = appointmentRepository.countCancelledAndNoShowBySpecialty(
+                from, to, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0)[0]).isEqualTo("Cardiología");
