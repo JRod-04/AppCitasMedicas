@@ -22,6 +22,9 @@ export const appointmentService = {
   markNoShow: (id) =>
     api.put(`/appointments/${id}/no-show`),
 
+  update: (id, data) => 
+    api.patch(`/appointments/${id}/`, data),
+
   delete: (id) =>
     api.delete(`/appointments/${id}`),
 };

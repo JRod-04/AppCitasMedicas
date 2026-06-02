@@ -1,34 +1,69 @@
 // src/services/api.js
 import axios from 'axios';
 
+const API_BASE = 'http://localhost:8080/api';
+
 const api = axios.create({
-  baseURL: '/api',                               // usa el proxy de package.json
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' }
 });
 
-// Interceptor global: loguea errores sin romper el flujo
+// ─── INTERCEPTOR REQUEST: agrega el token JWT a cada petición ──────────────
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ─── INTERCEPTOR RESPONSE: maneja errores globalmente ──────────────────────
 api.interceptors.response.use(
-  res => res,
-  err => {
+  (res) => res,
+  (err) => {
     console.error('[API Error]', err.response?.status, err.config?.url, err.response?.data);
+
+    // Si el token expiró o es inválido, redirige al login
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+
     return Promise.reject(err);
   }
 );
 
-// ─── HELPERS ──────────────────────────────────────────────
-// El backend devuelve Page<T> para la mayoría de endpoints
-// (con .content, .totalPages, .totalElements).
-// DoctorController.findAll devuelve List<T> directamente.
-// Usamos estos helpers para normalizar en un solo lugar.
-
-/** Extrae el array de un objeto Page o de un List plano */
+// ─── HELPERS ───────────────────────────────────────────────────────────────
 export const getContent  = (data) => Array.isArray(data) ? data : (data?.content ?? []);
 export const getTotal    = (data) => data?.totalElements ?? (Array.isArray(data) ? data.length : 0);
-export const getTotalPgs = (data) => data?.totalPages    ?? 1;
+export const getTotalPgs = (data) => data?.totalPages ?? 1;
 
-// ─── APPOINTMENTS ──────────────────────────────────────────
-// Backend: GET /api/appointments?page=&size=
-// No admite filtros status/doctorId (el backend no los tiene implementados)
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+export const authService = {
+  login: async (email, password) => {
+    const res = await api.post('/auth/login', { email, password });
+    localStorage.setItem('token', res.data.token);
+    return res;
+  },
+
+  register: async (email, password) => {
+    const res = await api.post('/auth/register', { email, password });
+    localStorage.setItem('token', res.data.token);
+    return res;
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  },
+
+  isAuthenticated: () => !!localStorage.getItem('token'),
+};
+
+// ─── APPOINTMENTS ──────────────────────────────────────────────────────────
 export const appointmentService = {
   getAll: (page = 0, size = 10) =>
     api.get(`/appointments?page=${page}&size=${size}`),
@@ -42,11 +77,9 @@ export const appointmentService = {
   confirm: (id) =>
     api.put(`/appointments/${id}/confirm`),
 
-  // Backend espera { cancellationReason: "..." }
   cancel: (id, cancellationReason) =>
     api.put(`/appointments/${id}/cancel`, { cancellationReason }),
 
-  // Backend acepta body opcional { observations }
   complete: (id, observations = null) =>
     api.put(`/appointments/${id}/complete`, observations ? { observations } : {}),
 
@@ -60,9 +93,7 @@ export const appointmentService = {
     api.delete(`/appointments/${id}`),
 };
 
-// ─── DOCTORS ───────────────────────────────────────────────
-// Backend: GET /api/doctors → devuelve List<DoctorResponse> (NO Page)
-// Por eso usamos getContent que maneja ambos casos.
+// ─── DOCTORS ───────────────────────────────────────────────────────────────
 export const doctorService = {
   getAll: (page = 0, size = 100, specialtyId = null) => {
     let url = `/doctors?page=${page}&size=${size}`;
@@ -82,14 +113,12 @@ export const doctorService = {
   delete: (id) =>
     api.delete(`/doctors/${id}`),
 
-  // Horarios del doctor
   getSchedules: (doctorId, page = 0, size = 20) =>
     api.get(`/doctors/${doctorId}/schedules?page=${page}&size=${size}`),
 
   createSchedule: (doctorId, data) =>
     api.post(`/doctors/${doctorId}/schedules`, data),
 
-  // Backend: PATCH /api/doctors/{doctorId}/schedules/{id}
   updateSchedule: (doctorId, id, data) =>
     api.patch(`/doctors/${doctorId}/schedules/${id}`, data),
 
@@ -97,8 +126,7 @@ export const doctorService = {
     api.delete(`/doctors/${doctorId}/schedules/${id}`),
 };
 
-// ─── PATIENTS ──────────────────────────────────────────────
-// Backend: GET /api/patients → Page<PatientResponse>
+// ─── PATIENTS ──────────────────────────────────────────────────────────────
 export const patientService = {
   getAll: (page = 0, size = 10) =>
     api.get(`/patients?page=${page}&size=${size}`),
@@ -116,8 +144,7 @@ export const patientService = {
     api.delete(`/patients/${id}`),
 };
 
-// ─── OFFICES ───────────────────────────────────────────────
-// Backend: GET /api/offices → Page<OfficeResponse>
+// ─── OFFICES ───────────────────────────────────────────────────────────────
 export const officeService = {
   getAll: (page = 0, size = 10) =>
     api.get(`/offices?page=${page}&size=${size}`),
@@ -132,8 +159,7 @@ export const officeService = {
     api.delete(`/offices/${id}`),
 };
 
-// ─── SPECIALTIES ───────────────────────────────────────────
-// Backend: GET /api/specialties → Page<SpecialtyResponse>
+// ─── SPECIALTIES ───────────────────────────────────────────────────────────
 export const specialtyService = {
   getAll: (page = 0, size = 100) =>
     api.get(`/specialties?page=${page}&size=${size}`),
@@ -145,8 +171,7 @@ export const specialtyService = {
     api.delete(`/specialties/${id}`),
 };
 
-// ─── APPOINTMENT TYPES ─────────────────────────────────────
-// Backend: GET /api/appointment-types → Page<AppointmentTypeResponse>
+// ─── APPOINTMENT TYPES ─────────────────────────────────────────────────────
 export const appointmentTypeService = {
   getAll: (page = 0, size = 100) =>
     api.get(`/appointment-types?page=${page}&size=${size}`),
@@ -158,15 +183,13 @@ export const appointmentTypeService = {
     api.delete(`/appointment-types/${id}`),
 };
 
-// ─── AVAILABILITY ──────────────────────────────────────────
-// Backend: GET /api/availability/doctors/{doctorId}?date=&appointmentTypeId=&page=&size=
+// ─── AVAILABILITY ──────────────────────────────────────────────────────────
 export const availabilityService = {
   getAvailableSlots: (doctorId, date, appointmentTypeId, page = 0, size = 50) =>
     api.get(`/availability/doctors/${doctorId}?date=${date}&appointmentTypeId=${appointmentTypeId}&page=${page}&size=${size}`),
 };
 
-// ─── REPORTS ───────────────────────────────────────────────
-// Backend espera fechas en formato ISO: YYYY-MM-DD
+// ─── REPORTS ───────────────────────────────────────────────────────────────
 export const reportService = {
   getOfficeOccupancy: (from, to, page = 0, size = 100) =>
     api.get(`/reports/office-occupancy?from=${from}&to=${to}&page=${page}&size=${size}`),
