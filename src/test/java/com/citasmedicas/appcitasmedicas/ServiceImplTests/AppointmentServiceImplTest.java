@@ -11,8 +11,11 @@ import com.citasmedicas.appcitasmedicas.Repository.*;
 import com.citasmedicas.appcitasmedicas.Service.Impl.AppointmentServiceImpl;
 import com.citasmedicas.appcitasmedicas.dto.Request.CancelAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
 import com.citasmedicas.appcitasmedicas.mapper.AppointmentMapper;
+import com.citasmedicas.appcitasmedicas.mapper.AppointmentRequestMapper;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,9 @@ class AppointmentServiceImplTest {
     @Mock
     private AppointmentMapper appointmentMapper;
 
+    @Mock
+    private AppointmentRequestMapper appointmentRequestMapper;
+
     @InjectMocks
     private AppointmentServiceImpl appointmentService;
 
@@ -75,7 +81,6 @@ class AppointmentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Configurar datos comunes
         patient = Patient.builder()
                 .id(1L)
                 .firstName("Ana")
@@ -133,10 +138,10 @@ class AppointmentServiceImplTest {
                 .build();
 
         createRequest = new CreateAppointmentRequest(
-                1L, 1L, 1L, 1L,           // patientId, doctorId, officeId, appointmentTypeId
-                LocalDateTime.now().plusDays(1).withHour(10).withMinute(0),  // startAt
-                LocalDateTime.now().plusDays(1).withHour(10).withMinute(30), // endAt
-                null                        // observations (puede ser null)
+                1L, 1L, 1L, 1L,
+                LocalDateTime.now().plusDays(1).withHour(10).withMinute(0),
+                LocalDateTime.now().plusDays(1).withHour(10).withMinute(30),
+                null
         );
 
         cancelRequest = new CancelAppointmentRequest("Paciente no pudo asistir");
@@ -147,14 +152,10 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe crear una cita exitosamente")
     void shouldCreateAppointmentSuccessfully() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
         when(appointmentTypeRepository.findById(1L)).thenReturn(Optional.of(appointmentType));
-
-        LocalDateTime startAt = createRequest.startAt();
-        LocalDateTime endAt = startAt.plusMinutes(30);
 
         when(doctorScheduleRepository.findByDoctorIdAndDayOfWeek(eq(1L), any(DayOfWeek.class)))
                 .thenReturn(List.of(DoctorSchedule.builder()
@@ -165,13 +166,13 @@ class AppointmentServiceImplTest {
         when(appointmentRepository.existsDoctorOverlap(any(), any(), any(), any(), any())).thenReturn(false);
         when(appointmentRepository.existsOfficeOverlap(any(), any(), any(), any(), any())).thenReturn(false);
         when(appointmentRepository.existsPatientOverlap(any(), any(), any(), any(), any())).thenReturn(false);
+
+        when(appointmentRequestMapper.toEntity(any(CreateAppointmentRequest.class))).thenReturn(appointment);
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.create(createRequest);
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(1L);
         verify(appointmentRepository).save(any(Appointment.class));
@@ -180,10 +181,8 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el paciente no existe")
     void shouldThrowWhenPatientNotFound() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Patient not found: 1");
@@ -192,11 +191,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el paciente está inactivo")
     void shouldThrowWhenPatientIsInactive() {
-        // Given
         patient.setStatus(PatientStatus.INACTIVE);
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Patient is inactive");
@@ -205,11 +202,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el doctor no existe")
     void shouldThrowWhenDoctorNotFound() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Doctor not found: 1");
@@ -218,12 +213,10 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el doctor está inactivo")
     void shouldThrowWhenDoctorIsInactive() {
-        // Given
         doctor.setActive(false);
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Doctor is inactive");
@@ -232,12 +225,10 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el consultorio no existe")
     void shouldThrowWhenOfficeNotFound() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Office not found: 1");
@@ -246,13 +237,11 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el consultorio no está activo")
     void shouldThrowWhenOfficeIsNotActive() {
-        // Given
         office.setStatus(OfficeStatus.INACTIVE);
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Office is not active");
@@ -261,13 +250,11 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando el tipo de cita no existe")
     void shouldThrowWhenAppointmentTypeNotFound() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
         when(appointmentTypeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Appointment type not found: 1");
@@ -276,19 +263,17 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando la fecha es en el pasado")
     void shouldThrowWhenStartDateIsInPast() {
-        // Given
         var pastRequest = new CreateAppointmentRequest(
                 1L, 1L, 1L, 1L,
                 LocalDateTime.now().minusDays(1),
                 LocalDateTime.now().minusDays(1).plusMinutes(30),
-                "Cita de señora de la tercera edad"
+                null
         );
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
         when(appointmentTypeRepository.findById(1L)).thenReturn(Optional.of(appointmentType));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(pastRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot create an appointment in the past");
@@ -302,14 +287,12 @@ class AppointmentServiceImplTest {
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
         when(appointmentTypeRepository.findById(1L)).thenReturn(Optional.of(appointmentType));
 
-        // Horario: 9:00 a 17:00
         when(doctorScheduleRepository.findByDoctorIdAndDayOfWeek(eq(1L), any(DayOfWeek.class)))
                 .thenReturn(List.of(DoctorSchedule.builder()
                         .startTime(LocalTime.of(9, 0))
                         .endTime(LocalTime.of(17, 0))
                         .build()));
 
-        // ✅ Cita a las 18:00 (FUERA del horario)
         var outOfHoursRequest = new CreateAppointmentRequest(
                 1L, 1L, 1L, 1L,
                 LocalDateTime.now().plusDays(1).withHour(18).withMinute(0),
@@ -325,7 +308,6 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando hay superposición con doctor")
     void shouldThrowWhenDoctorOverlap() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
@@ -337,7 +319,6 @@ class AppointmentServiceImplTest {
                         .build()));
         when(appointmentRepository.existsDoctorOverlap(any(), any(), any(), any(), any())).thenReturn(true);
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Doctor already has an appointment");
@@ -346,7 +327,6 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando hay superposición con consultorio")
     void shouldThrowWhenOfficeOverlap() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
@@ -359,7 +339,6 @@ class AppointmentServiceImplTest {
         when(appointmentRepository.existsDoctorOverlap(any(), any(), any(), any(), any())).thenReturn(false);
         when(appointmentRepository.existsOfficeOverlap(any(), any(), any(), any(), any())).thenReturn(true);
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Office is already occupied");
@@ -368,7 +347,6 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("create - debe lanzar excepción cuando hay superposición con paciente")
     void shouldThrowWhenPatientOverlap() {
-        // Given
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
         when(officeRepository.findById(1L)).thenReturn(Optional.of(office));
@@ -382,7 +360,6 @@ class AppointmentServiceImplTest {
         when(appointmentRepository.existsOfficeOverlap(any(), any(), any(), any(), any())).thenReturn(false);
         when(appointmentRepository.existsPatientOverlap(any(), any(), any(), any(), any())).thenReturn(true);
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.create(createRequest))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Patient already has an appointment");
@@ -393,14 +370,11 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("findById - debe encontrar una cita por ID")
     void shouldFindById() {
-        // Given
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(appointmentMapper.toResponse(appointment)).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.findById(1L);
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(1L);
     }
@@ -408,10 +382,8 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("findById - debe lanzar excepción cuando la cita no existe")
     void shouldThrowWhenAppointmentNotFound() {
-        // Given
         when(appointmentRepository.findById(999L)).thenReturn(Optional.empty());
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.findById(999L))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Appointment not found with id: 999");
@@ -422,16 +394,13 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("findAll - debe retornar página de citas")
     void shouldFindAll() {
-        // Given
         Pageable pageable = PageRequest.of(0, 10);
         Page<Appointment> appointmentPage = new PageImpl<>(List.of(appointment));
         when(appointmentRepository.findAll(pageable)).thenReturn(appointmentPage);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         Page<AppointmentResponse> result = appointmentService.findAll(pageable);
 
-        // Then
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent()).hasSize(1);
@@ -442,15 +411,12 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("confirm - debe confirmar una cita exitosamente")
     void shouldConfirmAppointment() {
-        // Given
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.confirm(1L);
 
-        // Then
         assertThat(result).isNotNull();
         verify(appointmentRepository).save(any(Appointment.class));
     }
@@ -458,11 +424,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("confirm - debe lanzar excepción cuando la cita no está SCHEDULED")
     void shouldThrowWhenConfirmingNonScheduledAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.CONFIRMED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.confirm(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Only SCHEDULED appointments can be confirmed");
@@ -473,15 +437,12 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("cancel - debe cancelar una cita exitosamente")
     void shouldCancelAppointment() {
-        // Given
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.cancel(1L, cancelRequest);
 
-        // Then
         assertThat(result).isNotNull();
         verify(appointmentRepository).save(any(Appointment.class));
     }
@@ -489,11 +450,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("cancel - debe lanzar excepción cuando la cita ya está COMPLETED")
     void shouldThrowWhenCancellingCompletedAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.COMPLETED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.cancel(1L, cancelRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot cancel a COMPLETED appointment");
@@ -502,11 +461,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("cancel - debe lanzar excepción cuando la cita ya está NO_SHOW")
     void shouldThrowWhenCancellingNoShowAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.NO_SHOW);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.cancel(1L, cancelRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot cancel a NO_SHOW appointment");
@@ -515,11 +472,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("cancel - debe lanzar excepción cuando la cita ya está CANCELLED")
     void shouldThrowWhenCancellingAlreadyCancelledAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.CANCELLED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.cancel(1L, cancelRequest))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Appointment is already cancelled");
@@ -530,17 +485,14 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("complete - debe completar una cita exitosamente")
     void shouldCompleteAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.CONFIRMED);
         appointment.setStartAt(LocalDateTime.now().minusHours(1));
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.complete(1L, "Paciente atendido correctamente");
 
-        // Then
         assertThat(result).isNotNull();
         verify(appointmentRepository).save(any(Appointment.class));
     }
@@ -548,11 +500,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("complete - debe lanzar excepción cuando la cita no está CONFIRMED")
     void shouldThrowWhenCompletingNonConfirmedAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.SCHEDULED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.complete(1L, "Observaciones"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Only CONFIRMED appointments can be completed");
@@ -561,12 +511,10 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("complete - debe lanzar excepción cuando se completa antes de la hora")
     void shouldThrowWhenCompletingBeforeStartTime() {
-        // Given
         appointment.setStatus(AppointmentStatus.CONFIRMED);
         appointment.setStartAt(LocalDateTime.now().plusHours(1));
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.complete(1L, "Observaciones"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot complete an appointment before its scheduled start time");
@@ -577,17 +525,14 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("markNoShow - debe marcar una cita como NO_SHOW exitosamente")
     void shouldMarkNoShow() {
-        // Given
         appointment.setStatus(AppointmentStatus.CONFIRMED);
         appointment.setStartAt(LocalDateTime.now().minusHours(1));
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
         when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
 
-        // When
         AppointmentResponse result = appointmentService.markNoShow(1L);
 
-        // Then
         assertThat(result).isNotNull();
         verify(appointmentRepository).save(any(Appointment.class));
     }
@@ -595,11 +540,9 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("markNoShow - debe lanzar excepción cuando la cita no está CONFIRMED")
     void shouldThrowWhenMarkingNoShowOnNonConfirmedAppointment() {
-        // Given
         appointment.setStatus(AppointmentStatus.SCHEDULED);
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.markNoShow(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Only CONFIRMED appointments can be marked as NO_SHOW");
@@ -608,14 +551,197 @@ class AppointmentServiceImplTest {
     @Test
     @DisplayName("markNoShow - debe lanzar excepción cuando se marca antes de la hora")
     void shouldThrowWhenMarkingNoShowBeforeStartTime() {
-        // Given
         appointment.setStatus(AppointmentStatus.CONFIRMED);
         appointment.setStartAt(LocalDateTime.now().plusHours(1));
         when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
 
-        // When & Then
         assertThatThrownBy(() -> appointmentService.markNoShow(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("Cannot mark an appointment as NO_SHOW before its scheduled start time");
+    }
+
+    // ==================== UPDATE TESTS ====================
+
+    @Test
+    @DisplayName("update - debe actualizar la fecha de una cita exitosamente")
+    void shouldUpdateAppointmentDateSuccessfully() {
+        LocalDateTime newStartAt = LocalDateTime.now().plusDays(2).withHour(11).withMinute(0);
+        LocalDateTime newEndAt = newStartAt.plusMinutes(30);
+        
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, newStartAt, newEndAt, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(doctorScheduleRepository.findByDoctorIdAndDayOfWeek(eq(1L), any(DayOfWeek.class)))
+                .thenReturn(List.of(DoctorSchedule.builder()
+                        .startTime(LocalTime.of(9, 0))
+                        .endTime(LocalTime.of(17, 0))
+                        .build()));
+        when(appointmentRepository.existsDoctorOverlap(any(), any(), any(), any(), any())).thenReturn(false);
+        when(appointmentRepository.existsOfficeOverlap(any(), any(), any(), any(), any())).thenReturn(false);
+        when(appointmentRepository.existsPatientOverlap(any(), any(), any(), any(), any())).thenReturn(false);
+        when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
+        when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
+        
+        AppointmentResponse result = appointmentService.update(1L, updateRequest);
+        
+        assertThat(result).isNotNull();
+        verify(appointmentRepository).save(any(Appointment.class));
+    }
+
+    @Test
+    @DisplayName("update - debe actualizar el consultorio de una cita exitosamente")
+    void shouldUpdateAppointmentOfficeSuccessfully() {
+        Office newOffice = Office.builder()
+                .id(2L)
+                .name("Consultorio 202")
+                .location("Piso 2")
+                .floor("202")
+                .status(OfficeStatus.ACTIVE)
+                .build();
+        
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                2L, null, null, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(officeRepository.findById(2L)).thenReturn(Optional.of(newOffice));
+        when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
+        when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
+        
+        AppointmentResponse result = appointmentService.update(1L, updateRequest);
+        
+        assertThat(result).isNotNull();
+        verify(appointmentRepository).save(any(Appointment.class));
+    }
+
+    @Test
+    @DisplayName("update - debe actualizar observaciones de una cita exitosamente")
+    void shouldUpdateAppointmentObservationsSuccessfully() {
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, null, null, "Observación actualizada"
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenReturn(appointment);
+        when(appointmentMapper.toResponse(any(Appointment.class))).thenReturn(appointmentResponse);
+        
+        AppointmentResponse result = appointmentService.update(1L, updateRequest);
+        
+        assertThat(result).isNotNull();
+        assertThat(appointment.getObservations()).isEqualTo("Observación actualizada");
+        verify(appointmentRepository).save(any(Appointment.class));
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando la cita está COMPLETED")
+    void shouldThrowWhenUpdatingCompletedAppointment() {
+        appointment.setStatus(AppointmentStatus.COMPLETED);
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, null, null, "Nueva observación"
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("No se puede actualizar la cita con estado: COMPLETED");
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando la cita está CANCELLED")
+    void shouldThrowWhenUpdatingCancelledAppointment() {
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, null, null, "Nueva observación"
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("No se puede actualizar la cita con estado: CANCELLED");
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando el nuevo consultorio no existe")
+    void shouldThrowWhenNewOfficeNotFound() {
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                999L, null, null, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(officeRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Consultorio no encontrado con ID: 999");
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando la nueva fecha está fuera del horario")
+    void shouldThrowWhenNewDateOutsideWorkingHours() {
+        LocalDateTime newStartAt = LocalDateTime.now().plusDays(2).withHour(20).withMinute(0);
+        LocalDateTime newEndAt = newStartAt.plusMinutes(30);
+        
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, newStartAt, newEndAt, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(doctorScheduleRepository.findByDoctorIdAndDayOfWeek(eq(1L), any(DayOfWeek.class)))
+                .thenReturn(List.of(DoctorSchedule.builder()
+                        .startTime(LocalTime.of(9, 0))
+                        .endTime(LocalTime.of(17, 0))
+                        .build()));
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("El nuevo horario está fuera del horario laboral del médico");
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando el consultorio no está activo")
+    void shouldThrowWhenNewOfficeIsNotActive() {
+        Office newOffice = Office.builder()
+                .id(2L)
+                .name("Consultorio 202")
+                .status(OfficeStatus.INACTIVE)
+                .build();
+        
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                2L, null, null, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(officeRepository.findById(2L)).thenReturn(Optional.of(newOffice));
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("El consultorio no está activo");
+    }
+
+    @Test
+    @DisplayName("update - debe lanzar excepción cuando hay superposición con médico")
+    void shouldThrowWhenDoctorOverlapOnUpdate() {
+        LocalDateTime newStartAt = LocalDateTime.now().plusDays(2).withHour(11).withMinute(0);
+        LocalDateTime newEndAt = newStartAt.plusMinutes(30);
+        
+        UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+                null, newStartAt, newEndAt, null
+        );
+        
+        when(appointmentRepository.findById(1L)).thenReturn(Optional.of(appointment));
+        when(doctorScheduleRepository.findByDoctorIdAndDayOfWeek(eq(1L), any(DayOfWeek.class)))
+                .thenReturn(List.of(DoctorSchedule.builder()
+                        .startTime(LocalTime.of(9, 0))
+                        .endTime(LocalTime.of(17, 0))
+                        .build()));
+        when(appointmentRepository.existsDoctorOverlap(any(), any(), any(), any(), any())).thenReturn(true);
+        
+        assertThatThrownBy(() -> appointmentService.update(1L, updateRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("El médico ya tiene una cita agendada en ese horario");
     }
 }

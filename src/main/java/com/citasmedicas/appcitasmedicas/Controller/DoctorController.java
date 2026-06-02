@@ -1,17 +1,14 @@
 package com.citasmedicas.appcitasmedicas.Controller;
 
-
 import com.citasmedicas.appcitasmedicas.Service.DoctorService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateDoctorRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdateDoctorRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.DoctorResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -20,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/doctors")
 @RequiredArgsConstructor
-@Validated
 public class DoctorController {
 
     private final DoctorService service;
@@ -43,13 +39,14 @@ public class DoctorController {
             @RequestParam(required = false) Long specialtyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        
         var pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        
         if (specialtyId != null) {
             return ResponseEntity.ok(service.findBySpecialty(specialtyId, pageable));
         }
         return ResponseEntity.ok(service.findAll(pageable));
     }
-
 
     @PatchMapping("/{id}")
     public ResponseEntity<DoctorResponse> updateDoctor(

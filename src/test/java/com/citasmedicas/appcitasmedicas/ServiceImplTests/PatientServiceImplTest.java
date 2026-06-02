@@ -1,6 +1,5 @@
 package com.citasmedicas.appcitasmedicas.ServiceImplTests;
 
-
 import com.citasmedicas.appcitasmedicas.Entity.Patient;
 import com.citasmedicas.appcitasmedicas.Enums.PatientStatus;
 import com.citasmedicas.appcitasmedicas.Exception.ConflictException;
@@ -11,6 +10,7 @@ import com.citasmedicas.appcitasmedicas.dto.Request.CreatePatientRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdatePatientRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.PatientResponse;
 import com.citasmedicas.appcitasmedicas.mapper.PatientMapper;
+import com.citasmedicas.appcitasmedicas.mapper.PatientRequestMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +40,9 @@ class PatientServiceImplTest {
 
     @Mock
     private PatientMapper patientMapper;
+
+    @Mock
+    private PatientRequestMapper patientRequestMapper;
 
     @InjectMocks
     private PatientServiceImpl patientService;
@@ -75,12 +77,13 @@ class PatientServiceImplTest {
                 "Ana", "Torres", "11111111", "ana@test.com", "3001234567", PatientStatus.ACTIVE
         );
 
+        // ✅ UpdateRequest AHORA ES JSON PLANO (sin JsonNullable)
         updateRequest = new UpdatePatientRequest(
-                JsonNullable.of("Ana Actualizada"),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined()
+                "Ana Actualizada",  // firstName
+                null,               // lastName
+                null,               // email
+                null,               // phone
+                null                // status
         );
     }
 
@@ -88,6 +91,7 @@ class PatientServiceImplTest {
     @DisplayName("create - debe crear un paciente exitosamente")
     void shouldCreatePatientSuccessfully() {
         when(patientRepository.findByDocumentNumber("11111111")).thenReturn(Optional.empty());
+        when(patientRequestMapper.toEntity(any(CreatePatientRequest.class))).thenReturn(patient);
         when(patientRepository.save(any(Patient.class))).thenReturn(patient);
         when(patientMapper.toResponse(patient)).thenReturn(patientResponse);
 
@@ -149,6 +153,14 @@ class PatientServiceImplTest {
     @DisplayName("update - debe actualizar un paciente exitosamente")
     void shouldUpdatePatient() {
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
+        doAnswer(invocation -> {
+            Patient patientToUpdate = invocation.getArgument(0);
+            UpdatePatientRequest req = invocation.getArgument(1);
+            if (req.firstName() != null) {
+                patientToUpdate.setFirstName(req.firstName());
+            }
+            return null;
+        }).when(patientRequestMapper).updateEntity(any(Patient.class), any(UpdatePatientRequest.class));
         when(patientRepository.save(any(Patient.class))).thenReturn(patient);
         when(patientMapper.toResponse(patient)).thenReturn(patientResponse);
 

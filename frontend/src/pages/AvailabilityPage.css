@@ -1,0 +1,16 @@
+/* src/pages/AvailabilityPage.css */
+.availability-page { max-width: 1000px; margin: 0 auto; }
+.filters-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 24px; }
+.filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; align-items: flex-end; }
+.results-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; padding: 24px; }
+.results-header { margin-bottom: 16px; }
+.results-header h2 { font-size: 1.25rem; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+.results-date { font-size: 0.875rem; color: #64748b; }
+.results-stats { display: flex; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
+.stat-available { color: #059669; font-weight: 500; }
+.stat-booked { color: #ef4444; font-weight: 500; }
+.slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+.slot-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 10px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; border: none; }
+.slot-btn.available { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.slot-btn.available:hover { background: #d1fae5; transform: translateY(-1px); }
+.slot-btn.booked { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; cursor: not-allowed; opacity: 0.7; }

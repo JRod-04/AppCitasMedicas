@@ -1,6 +1,5 @@
 package com.citasmedicas.appcitasmedicas.ServiceImplTests;
 
-
 import com.citasmedicas.appcitasmedicas.Entity.Doctor;
 import com.citasmedicas.appcitasmedicas.Entity.Specialty;
 import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
@@ -11,6 +10,7 @@ import com.citasmedicas.appcitasmedicas.dto.Request.CreateDoctorRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdateDoctorRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.DoctorResponse;
 import com.citasmedicas.appcitasmedicas.mapper.DoctorMapper;
+import com.citasmedicas.appcitasmedicas.mapper.DoctorRequestMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openapitools.jackson.nullable.JsonNullable;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +42,9 @@ class DoctorServiceImplTest {
 
     @Mock
     private DoctorMapper doctorMapper;
+
+    @Mock
+    private DoctorRequestMapper doctorRequestMapper;
 
     @InjectMocks
     private DoctorServiceImpl doctorService;
@@ -79,12 +81,13 @@ class DoctorServiceImplTest {
                 "Pedro", "Gil", "LIC-100", "pedro@test.com", 1L
         );
 
+        // ✅ UpdateRequest AHORA ES JSON PLANO (sin JsonNullable)
         updateRequest = new UpdateDoctorRequest(
-                JsonNullable.of("Carlos"),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined()
+                "Carlos",  // firstName
+                null,      // lastName
+                null,      // email
+                null,      // specialtyId
+                null       // active
         );
     }
 
@@ -92,6 +95,7 @@ class DoctorServiceImplTest {
     @DisplayName("create - debe crear un doctor exitosamente")
     void shouldCreateDoctorSuccessfully() {
         when(specialtyRepository.findById(1L)).thenReturn(Optional.of(specialty));
+        when(doctorRequestMapper.toEntity(any(CreateDoctorRequest.class))).thenReturn(doctor);
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctor);
         when(doctorMapper.toResponse(doctor)).thenReturn(doctorResponse);
 
@@ -162,6 +166,14 @@ class DoctorServiceImplTest {
     @DisplayName("update - debe actualizar un doctor exitosamente")
     void shouldUpdateDoctor() {
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(doctor));
+        doAnswer(invocation -> {
+            Doctor doctorToUpdate = invocation.getArgument(0);
+            UpdateDoctorRequest req = invocation.getArgument(1);
+            if (req.firstName() != null) {
+                doctorToUpdate.setFirstName(req.firstName());
+            }
+            return null;
+        }).when(doctorRequestMapper).updateEntity(any(Doctor.class), any(UpdateDoctorRequest.class));
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctor);
         when(doctorMapper.toResponse(doctor)).thenReturn(doctorResponse);
 

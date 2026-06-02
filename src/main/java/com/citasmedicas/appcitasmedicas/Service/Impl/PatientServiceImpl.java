@@ -1,6 +1,5 @@
 package com.citasmedicas.appcitasmedicas.Service.Impl;
 
-
 import com.citasmedicas.appcitasmedicas.Entity.Patient;
 import com.citasmedicas.appcitasmedicas.Exception.ConflictException;
 import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
@@ -10,6 +9,7 @@ import com.citasmedicas.appcitasmedicas.dto.Request.CreatePatientRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.UpdatePatientRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.PatientResponse;
 import com.citasmedicas.appcitasmedicas.mapper.PatientMapper;
+import com.citasmedicas.appcitasmedicas.mapper.PatientRequestMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,72 +22,50 @@ public class PatientServiceImpl implements PatientService {
 
     private final PatientRepository patientRepository;
     private final PatientMapper patientMapper;
+    private final PatientRequestMapper patientRequestMapper;
 
     @Override
     @Transactional
-    public PatientResponse create(CreatePatientRequest request) {
-        patientRepository.findByDocumentNumber(request.documentNumber())
+    public PatientResponse create(CreatePatientRequest req) {
+        patientRepository.findByDocumentNumber(req.documentNumber())
                 .ifPresent(p -> {
-                    throw new ConflictException("Patient with document number " + request.documentNumber() + " already exists");
+                    throw new ConflictException("Patient with document number " + req.documentNumber() + " already exists");
                 });
 
-        Patient patient = Patient.builder()
-                .firstName(request.firstName())
-                .lastName(request.lastName())
-                .documentNumber(request.documentNumber())
-                .email(request.email())
-                .phone(request.phone())
-                .status(request.status())
-                .build();
-
+        Patient patient = patientRequestMapper.toEntity(req);
         return patientMapper.toResponse(patientRepository.save(patient));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public PatientResponse findById(Long id) {
-        return patientMapper.toResponse(getOrThrow(id));
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + id));
+        return patientMapper.toResponse(patient);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<PatientResponse> findAll(Pageable page) {
-        return patientRepository.findAll(page)
+    public Page<PatientResponse> findAll(Pageable pageable) {
+        return patientRepository.findAll(pageable)
                 .map(patientMapper::toResponse);
     }
 
     @Override
     @Transactional
-    public PatientResponse update(Long id, UpdatePatientRequest request) {
-        Patient patient = getOrThrow(id);
+    public PatientResponse update(Long id, UpdatePatientRequest req) {
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + id));
 
-        if (request.firstName().isPresent()) {
-            patient.setFirstName(request.firstName().get());
-        }
-        if (request.lastName().isPresent()) {
-            patient.setLastName(request.lastName().get());
-        }
-        if (request.email().isPresent()) {
-            patient.setEmail(request.email().get());
-        }
-        if (request.phone().isPresent()) {
-            patient.setPhone(request.phone().get());
-        }
-        if (request.status().isPresent()) {
-            patient.setStatus(request.status().get());
-        }
+        patientRequestMapper.updateEntity(patient, req);
 
         return patientMapper.toResponse(patientRepository.save(patient));
     }
 
-    private Patient getOrThrow(Long id) {
-        return patientRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Patient not found with id: " + id));
-    }
     @Override
     @Transactional
     public void delete(Long id) {
-        Patient patient = getOrThrow(id);
-        patientRepository.delete(patient);
+        if (!patientRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Patient not found with id: " + id);
+        }
+        patientRepository.deleteById(id);
     }
 }

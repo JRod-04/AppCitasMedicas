@@ -1,0 +1,16 @@
+/* src/pages/DoctorsPage.css */
+.doctors-page { max-width: 1200px; margin: 0 auto; }
+.doctor-cell { display: flex; align-items: center; gap: 12px; }
+.doctor-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; text-transform: uppercase; }
+.doctor-name { font-weight: 500; color: #0f172a; margin-bottom: 2px; }
+.doctor-email { font-size: 0.75rem; color: #94a3b8; }
+.specialty-badge { background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; color: #475569; display: inline-block; }
+.action-btn.schedule { background: #f1f5f9; color: #475569; padding: 6px 12px; gap: 6px; }
+.action-btn.schedule:hover { background: #e2e8f0; }
+.modal-large { max-width: 600px; }
+.schedule-form { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.schedule-form .form-select, .schedule-form .form-input { flex: 1; }
+.schedules-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.schedule-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f8fafc; border-radius: 10px; }
+.schedule-day { font-weight: 600; color: #0f172a; }
+.schedule-time { color: #64748b; font-size: 0.875rem; }

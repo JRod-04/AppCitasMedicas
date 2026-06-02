@@ -18,8 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openapitools.jackson.nullable.JsonNullable;
-import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -53,13 +51,11 @@ class PatientControllerTest {
 
     @BeforeEach
     void setUp() {
-        // ✅ Configurar ObjectMapper con soporte para JsonNullable
+        // Configurar ObjectMapper SIN JsonNullableModule
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.registerModule(new JsonNullableModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // ✅ Configurar MockMvc con el ObjectMapper personalizado
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setObjectMapper(objectMapper);
 
@@ -80,12 +76,13 @@ class PatientControllerTest {
 
         createRequest = new CreatePatientRequest("Ana", "Torres", "11111111", "ana@test.com", "3001234567", PatientStatus.ACTIVE);
 
+        // ✅ UpdateRequest AHORA ES JSON PLANO (sin JsonNullable)
         updateRequest = new UpdatePatientRequest(
-                JsonNullable.of("Ana Actualizada"),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined()
+                "Ana Actualizada",  // firstName
+                null,               // lastName
+                null,               // email
+                null,               // phone
+                null                // status
         );
     }
 
@@ -132,10 +129,8 @@ class PatientControllerTest {
     @Test
     @DisplayName("update - debe actualizar un paciente")
     void shouldUpdate() throws Exception {
-        // ✅ CORREGIDO: Usar patientService, no officeService
         when(patientService.update(eq(1L), any(UpdatePatientRequest.class))).thenReturn(patientResponse);
 
-        // ✅ CORREGIDO: URL correcta para pacientes
         mockMvc.perform(patch("/api/patients/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))

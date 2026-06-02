@@ -18,8 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openapitools.jackson.nullable.JsonNullable;
-import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -53,13 +51,11 @@ class OfficeControllerTest {
 
     @BeforeEach
     void setUp() {
-        // ✅ Configurar ObjectMapper con soporte para JsonNullable
+        // Configurar ObjectMapper SIN JsonNullableModule
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.registerModule(new JsonNullableModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // ✅ Configurar MockMvc con el ObjectMapper personalizado
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setObjectMapper(objectMapper);
 
@@ -79,11 +75,12 @@ class OfficeControllerTest {
 
         createRequest = new CreateOfficeRequest("Consultorio 101", "Piso 1", "101", OfficeStatus.ACTIVE);
 
+        // ✅ UpdateRequest AHORA ES JSON PLANO (sin JsonNullable)
         updateRequest = new UpdateOfficeRequest(
-                JsonNullable.of("Consultorio 101 Actualizado"),
-                JsonNullable.undefined(),
-                JsonNullable.undefined(),
-                JsonNullable.undefined()
+                "Consultorio 101 Actualizado",  // name
+                null,  // location
+                null,  // floor
+                null   // status
         );
     }
 
@@ -128,6 +125,7 @@ class OfficeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L));
     }
+
     @Test
     @DisplayName("delete - debe eliminar un consultorio")
     void shouldDeleteOffice() throws Exception {
