@@ -1,9 +1,7 @@
 package com.citasmedicas.appcitasmedicas.Service.Impl;
 
-
 import com.citasmedicas.appcitasmedicas.Entity.Doctor;
 import com.citasmedicas.appcitasmedicas.Entity.DoctorSchedule;
-import com.citasmedicas.appcitasmedicas.Exception.BusinessException;
 import com.citasmedicas.appcitasmedicas.Exception.ResourceNotFoundException;
 import com.citasmedicas.appcitasmedicas.Repository.DoctorRepository;
 import com.citasmedicas.appcitasmedicas.Repository.DoctorScheduleRepository;
@@ -18,8 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class DoctorScheduleServiceImpl implements DoctorScheduleService {
@@ -28,70 +24,52 @@ public class DoctorScheduleServiceImpl implements DoctorScheduleService {
     private final DoctorRepository doctorRepository;
     private final DoctorScheduleMapper doctorScheduleMapper;
 
-
-
     @Override
-    public DoctorScheduleResponse create(Long doctorId, CreateDoctorScheduleRequest request) {
+    @Transactional
+    public DoctorScheduleResponse create(Long doctorId, CreateDoctorScheduleRequest req) {
         Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with id: " + doctorId));
-
-        if (!doctor.isActive()) {
-            throw new BusinessException("Cannot add schedule to an inactive doctor");
-        }
-
-        if (request.startTime().isAfter(request.endTime()) ||
-                request.startTime().equals(request.endTime())) {
-            throw new BusinessException("Start time must be before end time");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found: " + doctorId));
 
         DoctorSchedule schedule = DoctorSchedule.builder()
                 .doctor(doctor)
-                .dayOfWeek(request.dayOfWeek())
-                .startTime(request.startTime())
-                .endTime(request.endTime())
+                .dayOfWeek(req.dayOfWeek())
+                .startTime(req.startTime())
+                .endTime(req.endTime())
                 .build();
 
         return doctorScheduleMapper.toResponse(doctorScheduleRepository.save(schedule));
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public Page<DoctorScheduleResponse> findByDoctor(Long doctorId, Pageable page) {
-        if (!doctorRepository.existsById(doctorId)) {
-            throw new ResourceNotFoundException("Doctor not found with id: " + doctorId);
-        }
-        return doctorScheduleRepository.findByDoctorId(doctorId, page)
+    public Page<DoctorScheduleResponse> findByDoctor(Long doctorId, Pageable pageable) {
+        return doctorScheduleRepository.findByDoctorId(doctorId, pageable)
                 .map(doctorScheduleMapper::toResponse);
     }
+
     @Override
     @Transactional
-    public DoctorScheduleResponse update(Long id, UpdateDoctorScheduleRequest request) {
+    public DoctorScheduleResponse update(Long id, UpdateDoctorScheduleRequest req) {
         DoctorSchedule schedule = doctorScheduleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found: " + id));
 
-        if (request.dayOfWeek().isPresent()) {
-            schedule.setDayOfWeek(request.dayOfWeek().get());
+        if (req.dayOfWeek() != null) {
+            schedule.setDayOfWeek(req.dayOfWeek());
         }
-        if (request.startTime().isPresent()) {
-            schedule.setStartTime(request.startTime().get());
+        if (req.startTime() != null) {
+            schedule.setStartTime(req.startTime());
         }
-        if (request.endTime().isPresent()) {
-            schedule.setEndTime(request.endTime().get());
-        }
-
-        // Validar que startTime sea antes que endTime
-        if (schedule.getStartTime().isAfter(schedule.getEndTime()) ||
-                schedule.getStartTime().equals(schedule.getEndTime())) {
-            throw new BusinessException("Start time must be before end time");
+        if (req.endTime() != null) {
+            schedule.setEndTime(req.endTime());
         }
 
         return doctorScheduleMapper.toResponse(doctorScheduleRepository.save(schedule));
     }
+
     @Override
     @Transactional
     public void delete(Long id) {
         if (!doctorScheduleRepository.existsById(id)) {
-            throw new ResourceNotFoundException("DoctorSchedule not found with id: " + id);
+            throw new ResourceNotFoundException("Schedule not found: " + id);
         }
         doctorScheduleRepository.deleteById(id);
     }

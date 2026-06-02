@@ -5,6 +5,7 @@ package com.citasmedicas.appcitasmedicas.Controller;
 import com.citasmedicas.appcitasmedicas.Service.AppointmentService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CancelAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,4 +77,11 @@ public class AppointmentController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}")
+public ResponseEntity<AppointmentResponse> update(
+        @PathVariable Long id,
+        @RequestBody UpdateAppointmentRequest request) {
+    return ResponseEntity.ok(service.update(id, request));
+}
 }

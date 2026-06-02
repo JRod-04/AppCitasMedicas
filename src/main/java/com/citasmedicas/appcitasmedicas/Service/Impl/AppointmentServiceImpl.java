@@ -11,20 +11,23 @@ import com.citasmedicas.appcitasmedicas.Repository.*;
 import com.citasmedicas.appcitasmedicas.Service.AppointmentService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CancelAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
 import com.citasmedicas.appcitasmedicas.mapper.AppointmentMapper;
-
-
+import com.citasmedicas.appcitasmedicas.mapper.AppointmentRequestMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class AppointmentServiceImpl implements AppointmentService {
 
     private final DoctorRepository doctorRepository;
@@ -34,24 +37,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final PatientRepository patientRepository;
     private final OfficeRepository officeRepository;
     private final AppointmentMapper appointmentMapper;
+    private final AppointmentRequestMapper appointmentRequestMapper; // ← AGREGAR ESTO
 
-    public AppointmentServiceImpl(
-            DoctorRepository doctorRepository,
-            DoctorScheduleRepository doctorScheduleRepository,
-            AppointmentRepository appointmentRepository,
-            AppointmentTypeRepository appointmentTypeRepository,
-            PatientRepository patientRepository,
-            OfficeRepository officeRepository,
-            AppointmentMapper appointmentMapper) {
-
-        this.doctorRepository = doctorRepository;
-        this.doctorScheduleRepository = doctorScheduleRepository;
-        this.appointmentRepository = appointmentRepository;
-        this.appointmentTypeRepository = appointmentTypeRepository;
-        this.patientRepository = patientRepository;
-        this.officeRepository = officeRepository;
-        this.appointmentMapper = appointmentMapper;
-    }
 
     @Override
     @Transactional
@@ -96,8 +83,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                     "Cannot create an appointment in the past");
         }
 
-        LocalDateTime endAt =
-                startAt.plusMinutes(appointmentType.getDurationMinutes());
+        LocalDateTime endAt = startAt.plusMinutes(appointmentType.getDurationMinutes());
 
         DayOfWeek dayOfWeek = startAt.getDayOfWeek();
 
@@ -143,21 +129,14 @@ public class AppointmentServiceImpl implements AppointmentService {
                 startAt,
                 endAt,
                 null,
-                AppointmentStatus.CANCELLED)) {  // ✅
+                AppointmentStatus.CANCELLED)) {
 
             throw new ConflictException(
                     "Patient already has an appointment in that time range");
         }
 
-        Appointment appointment = Appointment.builder()
-                .patient(patient)
-                .doctor(doctor)
-                .office(office)
-                .appointmentType(appointmentType)
-                .startAt(startAt)
-                .endAt(endAt)
-                .status(AppointmentStatus.SCHEDULED)
-                .build();
+        // USAR EL MAPPER PARA CREAR LA ENTIDAD
+        Appointment appointment = appointmentRequestMapper.toEntity(request);
 
         appointment = appointmentRepository.save(appointment);
 
@@ -279,6 +258,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentMapper.toResponse(appointment);
     }
 
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        Appointment appointment = getOrThrow(id);
+        appointmentRepository.delete(appointment);
+    }
+
     private Appointment getOrThrow(Long id) {
         return appointmentRepository.findById(id)
                 .orElseThrow(() ->
@@ -286,9 +272,89 @@ public class AppointmentServiceImpl implements AppointmentService {
                                 "Appointment not found with id: " + id));
     }
     @Override
-    @Transactional
-    public void delete(Long id) {
-        Appointment appointment = getOrThrow(id);
-        appointmentRepository.delete(appointment);
+@Transactional
+public AppointmentResponse update(Long id, UpdateAppointmentRequest request) {
+    // 1. Buscar la cita existente
+    Appointment appointment = getOrThrow(id);
+    
+    // 2. Solo se pueden actualizar citas AGENDADAS o CONFIRMADAS
+    if (appointment.getStatus() != AppointmentStatus.SCHEDULED 
+            && appointment.getStatus() != AppointmentStatus.CONFIRMED) {
+        throw new BusinessException(
+            "No se puede actualizar la cita con estado: " + appointment.getStatus() + 
+            ". Solo las citas AGENDADAS o CONFIRMADAS pueden ser actualizadas."
+        );
     }
+    
+    // 3. Verificar si se va a cambiar el consultorio
+    if (request.officeId() != null) {
+        Office newOffice = officeRepository.findById(request.officeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Consultorio no encontrado con ID: " + request.officeId()));
+        
+        if (newOffice.getStatus() != OfficeStatus.ACTIVE) {
+            throw new BusinessException("El consultorio no está activo");
+        }
+        appointment.setOffice(newOffice);
+    }
+    
+    // 4. Verificar si se va a cambiar la fecha/hora
+    LocalDateTime startAt = request.startAt() != null ? request.startAt() : appointment.getStartAt();
+    LocalDateTime endAt = request.endAt() != null ? request.endAt() : appointment.getEndAt();
+    
+    if (request.startAt() != null || request.endAt() != null) {
+        // Validar que endAt sea después de startAt
+        if (endAt.isBefore(startAt) || endAt.equals(startAt)) {
+            throw new BusinessException("La hora de finalización debe ser posterior a la hora de inicio");
+        }
+        
+        // Validar que no sea en el pasado
+        if (startAt.isBefore(LocalDateTime.now())) {
+            throw new BusinessException("No se puede agendar una cita en el pasado");
+        }
+        
+        // Validar horario del doctor
+        Doctor doctor = appointment.getDoctor();
+        DayOfWeek dayOfWeek = startAt.getDayOfWeek();
+        
+        List<DoctorSchedule> schedules = doctorScheduleRepository.findByDoctorIdAndDayOfWeek(
+                doctor.getId(), dayOfWeek);
+        
+        boolean withinSchedule = schedules.stream().anyMatch(schedule ->
+                !startAt.toLocalTime().isBefore(schedule.getStartTime())
+                        && !endAt.toLocalTime().isAfter(schedule.getEndTime()));
+        
+        if (!withinSchedule) {
+            throw new BusinessException("El nuevo horario está fuera del horario laboral del médico");
+        }
+        
+        // Validar superposiciones (excluyendo la cita actual)
+        if (appointmentRepository.existsDoctorOverlap(
+                doctor.getId(), startAt, endAt, id, AppointmentStatus.CANCELLED)) {
+            throw new ConflictException("El médico ya tiene una cita agendada en ese horario");
+        }
+        
+        if (appointmentRepository.existsOfficeOverlap(
+                appointment.getOffice().getId(), startAt, endAt, id, AppointmentStatus.CANCELLED)) {
+            throw new ConflictException("El consultorio ya está ocupado en ese horario");
+        }
+        
+        if (appointmentRepository.existsPatientOverlap(
+                appointment.getPatient().getId(), startAt, endAt, id, AppointmentStatus.CANCELLED)) {
+            throw new ConflictException("El paciente ya tiene una cita agendada en ese horario");
+        }
+        
+        appointment.setStartAt(startAt);
+        appointment.setEndAt(endAt);
+    }
+    
+    // 5. Actualizar observaciones si se enviaron
+    if (request.observations() != null) {
+        appointment.setObservations(request.observations());
+    }
+    
+    appointment.setUpdatedAt(LocalDateTime.now());
+    
+    return appointmentMapper.toResponse(appointmentRepository.save(appointment));
+}
+    
 }

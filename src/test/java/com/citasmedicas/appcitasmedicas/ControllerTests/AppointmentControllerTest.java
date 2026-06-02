@@ -7,6 +7,7 @@ import com.citasmedicas.appcitasmedicas.Enums.AppointmentStatus;
 import com.citasmedicas.appcitasmedicas.Service.AppointmentService;
 import com.citasmedicas.appcitasmedicas.dto.Request.CancelAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Request.CreateAppointmentRequest;
+import com.citasmedicas.appcitasmedicas.dto.Request.UpdateAppointmentRequest;
 import com.citasmedicas.appcitasmedicas.dto.Response.AppointmentResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -200,4 +201,25 @@ class AppointmentControllerTest {
         mockMvc.perform(delete("/api/appointments/1"))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+@DisplayName("update - debe actualizar una cita")
+void shouldUpdateAppointment() throws Exception {
+    // Given
+    UpdateAppointmentRequest updateRequest = new UpdateAppointmentRequest(
+            null, 
+            LocalDateTime.now().plusDays(2).withHour(11).withMinute(0),
+            LocalDateTime.now().plusDays(2).withHour(11).withMinute(30),
+            "Observación actualizada"
+    );
+    
+    when(appointmentService.update(eq(1L), any(UpdateAppointmentRequest.class))).thenReturn(appointmentResponse);
+    
+    // When & Then
+    mockMvc.perform(patch("/api/appointments/1")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(updateRequest)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(1L));
+}
 }

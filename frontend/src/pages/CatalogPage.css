@@ -1,0 +1,20 @@
+/* src/pages/CatalogPage.css */
+.catalog-page { max-width: 1200px; margin: 0 auto; }
+.catalog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.catalog-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; }
+.catalog-card-header { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+.catalog-card-header h2 { font-size: 1.125rem; font-weight: 600; color: #0f172a; margin: 0; }
+.card-badge { font-size: 0.75rem; padding: 4px 10px; background: #f1f5f9; border-radius: 20px; color: #475569; }
+.catalog-items { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.catalog-item { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 12px; transition: all 0.2s; }
+.catalog-item:hover { background: #f1f5f9; }
+.item-code { width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.125rem; }
+.item-info { flex: 1; }
+.item-name { font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+.item-desc { font-size: 0.75rem; color: #64748b; }
+.item-delete { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 6px; border-radius: 8px; transition: all 0.2s; }
+.item-delete:hover { background: #fee2e2; color: #ef4444; }
+.add-item-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: white; border: 1px dashed #cbd5e1; border-radius: 12px; color: #3b82f6; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.add-item-btn:hover { background: #eff6ff; border-color: #3b82f6; }
+.form-textarea { width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.875rem; font-family: inherit; resize: vertical; }
+@media (max-width: 768px) { .catalog-grid { grid-template-columns: 1fr; } }

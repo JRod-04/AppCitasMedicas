@@ -17,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openapitools.jackson.nullable.JsonNullableModule;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -49,10 +48,9 @@ class DoctorControllerTest {
 
     @BeforeEach
     void setUp() {
-        // ✅ Configurar ObjectMapper con soporte para JsonNullable y LocalDateTime
+        // ✅ Configurar ObjectMapper SIN JsonNullableModule
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.registerModule(new JsonNullableModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
@@ -61,7 +59,7 @@ class DoctorControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(doctorController)
                 .setMessageConverters(converter)
-                .setControllerAdvice(new GlobalExceptionHandler())  // ← Línea clave
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
         doctorResponse = DoctorResponse.builder()
@@ -74,12 +72,13 @@ class DoctorControllerTest {
 
         createRequest = new CreateDoctorRequest("Pedro", "Gil", "LIC-100", "pedro@test.com", 1L);
 
+        // ✅ UpdateRequest AHORA ES JSON PLANO (sin JsonNullable)
         updateRequest = new UpdateDoctorRequest(
-                org.openapitools.jackson.nullable.JsonNullable.of("Carlos"),
-                org.openapitools.jackson.nullable.JsonNullable.undefined(),
-                org.openapitools.jackson.nullable.JsonNullable.undefined(),
-                org.openapitools.jackson.nullable.JsonNullable.undefined(),
-                org.openapitools.jackson.nullable.JsonNullable.undefined()
+                "Carlos",  // firstName (String normal)
+                null,      // lastName
+                null,      // email
+                null,      // specialtyId
+                null       // active
         );
     }
 
@@ -148,7 +147,7 @@ class DoctorControllerTest {
         doNothing().when(doctorService).delete(1L);
 
         mockMvc.perform(delete("/api/doctors/1"))
-                .andExpect(status().isNoContent());  // ✅ 204 No Content
+                .andExpect(status().isNoContent());
     }
 
     @Test
