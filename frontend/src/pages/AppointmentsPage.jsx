@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { appointmentService, doctorService, patientService, officeService, appointmentTypeService } from '../services/api';
+import './AppointmentsPage.css';  // ← IMPORTAR CSS
 
 const statusConfig = {
   SCHEDULED: { label: 'Agendada', class: 'badge-scheduled' },
@@ -64,15 +65,16 @@ export default function AppointmentsPage() {
         officeService.getAll(0, 100),
         appointmentTypeService.getAll(0, 100)
       ]);
-      setDoctors(doctorsRes.data);
-      setPatients(patientsRes.data);
-      setOffices(officesRes.data);
-      setAppointmentTypes(typesRes.data);
+
+      setDoctors(Array.isArray(doctorsRes.data) ? doctorsRes.data : doctorsRes.data.content ?? []);
+      setPatients(patientsRes.data.content ?? []);
+      setOffices(officesRes.data.content ?? []);
+      setAppointmentTypes(typesRes.data.content ?? []);
     } catch (error) {
       console.error('Error loading select data:', error);
     }
   };
-
+  
   const showMessage = (text, type = 'success') => {
     setMessage({ show: true, text, type });
     setTimeout(() => setMessage({ show: false, text: '', type: 'success' }), 3000);
@@ -173,31 +175,22 @@ export default function AppointmentsPage() {
   };
 
   return (
-    <div>
+    <div className="appointments-page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>Citas Médicas</h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Gestione todas las citas de la clínica</p>
+          <h1>Citas Médicas</h1>
+          <p>Gestione todas las citas de la clínica</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>+</span> Nueva Cita
+        <button className="btn-primary" onClick={() => setShowModal(true)}>
+          + Nueva Cita
         </button>
       </div>
 
       {/* Toast Message */}
       {message.show && (
-        <div style={{
-          position: 'fixed',
-          top: '80px',
-          right: '24px',
-          zIndex: 1000,
-          padding: '12px 20px',
-          borderRadius: '12px',
-          background: message.type === 'success' ? '#059669' : '#dc2626',
-          color: 'white',
-          fontWeight: '500',
-          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+        <div className="toast-message" style={{
+          background: message.type === 'success' ? '#059669' : '#dc2626'
         }}>
           {message.text}
         </div>
@@ -205,8 +198,8 @@ export default function AppointmentsPage() {
 
       {/* Table */}
       <div className="table-container">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead className="table-header">
+        <table className="appointments-table">
+          <thead>
             <tr>
               <th>ID</th>
               <th>Paciente</th>
@@ -219,7 +212,7 @@ export default function AppointmentsPage() {
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody className="table-body">
+          <tbody>
             {loading ? (
               <tr><td colSpan="9"><div className="loading-spinner"><div className="spinner"></div></div></td></tr>
             ) : appointments.length === 0 ? (
@@ -236,20 +229,20 @@ export default function AppointmentsPage() {
                   <td>{formatDateTime(app.endAt)}</td>
                   <td><span className={`badge ${statusConfig[app.status]?.class || 'badge-scheduled'}`}>{statusConfig[app.status]?.label || app.status}</span></td>
                   <td>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div className="action-buttons">
                       {app.status === 'SCHEDULED' && (
-                        <button onClick={() => handleConfirm(app.id)} style={{ background: '#dbeafe', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#2563eb', fontWeight: '500', fontSize: '12px' }}>✓ Confirmar</button>
+                        <button className="action-btn confirm" onClick={() => handleConfirm(app.id)}>✓ Confirmar</button>
                       )}
                       {(app.status === 'SCHEDULED' || app.status === 'CONFIRMED') && (
                         <>
-                          <button onClick={() => handleComplete(app.id)} style={{ background: '#d1fae5', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#059669', fontWeight: '500', fontSize: '12px' }}>✔ Completar</button>
-                          <button onClick={() => { setSelectedAppointment(app); setShowCancelModal(true); }} style={{ background: '#fee2e2', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#dc2626', fontWeight: '500', fontSize: '12px' }}>✗ Cancelar</button>
+                          <button className="action-btn complete" onClick={() => handleComplete(app.id)}>✔ Completar</button>
+                          <button className="action-btn cancel" onClick={() => { setSelectedAppointment(app); setShowCancelModal(true); }}>✗ Cancelar</button>
                         </>
                       )}
                       {app.status === 'CONFIRMED' && (
-                        <button onClick={() => handleNoShow(app.id)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#64748b', fontWeight: '500', fontSize: '12px' }}>⊘ No Asistió</button>
+                        <button className="action-btn no-show" onClick={() => handleNoShow(app.id)}>⊘ No Asistió</button>
                       )}
-                      <button onClick={() => handleDelete(app.id)} style={{ background: '#fef2f2', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', color: '#b91c1c', fontWeight: '500', fontSize: '12px' }}>🗑 Eliminar</button>
+                      <button className="action-btn delete" onClick={() => handleDelete(app.id)}>🗑 Eliminar</button>
                     </div>
                   </td>
                 </tr>
@@ -274,7 +267,7 @@ export default function AppointmentsPage() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Nueva Cita</h2></div>
+            <div className="modal-header"><h2>Nueva Cita</h2></div>
             <div className="modal-body">
               <div className="form-group">
                 <label className="form-label">Paciente</label>
@@ -329,7 +322,7 @@ export default function AppointmentsPage() {
       {showCancelModal && (
         <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
           <div className="modal-container" onClick={e => e.stopPropagation()}>
-            <div className="modal-header"><h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Cancelar Cita</h2></div>
+            <div className="modal-header"><h2>Cancelar Cita</h2></div>
             <div className="modal-body">
               <div className="form-group">
                 <label className="form-label">Motivo de cancelación</label>

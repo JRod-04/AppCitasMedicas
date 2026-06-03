@@ -116,7 +116,7 @@
 .link-btn {
   background: none;
   border: none;
-  color: #3b82f6;
+  color: #20ff02;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -127,7 +127,7 @@
 }
 
 .link-btn:hover {
-  color: #2563eb;
+  color: #00ff00;
 }
 
 /* Tables */

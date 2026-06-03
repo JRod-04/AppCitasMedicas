@@ -30,7 +30,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <div className="sidebar-header">
         <div className="logo">
           {!collapsed && <span className="logo-text">Sistema Médico</span>}
-          {collapsed && <span className="logo-icon">🏥</span>}
         </div>
         <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
